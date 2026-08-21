@@ -1,0 +1,9 @@
+This plugin vendors runtime modules from OpenViking
+(https://github.com/volcengine/OpenViking, examples/memory-plugin-shared)
+under the GNU Affero General Public License v3.0.
+
+The Grok harness adapter (scripts/*.mjs except scripts/shared/) is original
+work for Grok Build and is distributed under the same license because it is
+combined with the vendored OpenViking runtime.
+
+This is a community adapter. It is not an official OpenViking or xAI product.

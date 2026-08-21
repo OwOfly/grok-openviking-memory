@@ -1,0 +1,19 @@
+{
+  "name": "openviking-memory",
+  "version": "0.1.0",
+  "description": "Community OpenViking memory plugin for Grok. Auto-recall on each prompt and auto-capture on turn end.",
+  "author": {
+    "name": "OwOfly",
+    "url": "https://github.com/OwOfly/grok-openviking-memory"
+  },
+  "homepage": "https://github.com/OwOfly/grok-openviking-memory",
+  "repository": "https://github.com/OwOfly/grok-openviking-memory",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "memory",
+    "openviking",
+    "hooks",
+    "long-term-memory",
+    "grok"
+  ]
+}

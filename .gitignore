@@ -1,0 +1,8 @@
+*.zip
+.DS_Store
+Thumbs.db
+node_modules/
+.env
+ovcli.conf
+ov.conf
+*.log
