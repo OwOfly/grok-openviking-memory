@@ -51,28 +51,32 @@ git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
 ```
 
-### 报错 `schannel: failed to receive handshake`
+### Windows 上 clone 失败
 
-`grok plugin install 用户名/仓库` 会走 **HTTPS**（`https://github.com/OwOfly/grok-openviking-memory/`）。Windows 上 Git 默认 `http.sslBackend=schannel`，连 GitHub 时 TLS 握手经常失败（代理、公司网关、线路不稳）。仓库是公开的，这不是没权限或 404。
+Grok 的 `plugin install` 会自己再跑一遍 `git clone`，用的环境和你在 PowerShell 里不一定相同。仓库是公开的；下面两种报错都不是「没权限」。
 
-改用 SSH（Grok 接受完整 git URL）：
+**`schannel: failed to receive handshake`** — 简写 `OwOfly/仓库` 走 HTTPS，Windows Git 默认 `schannel`，连 GitHub 容易握不上。
 
-```bash
-grok plugin install git@github.com:OwOfly/grok-openviking-memory.git --trust
-grok plugin enable openviking-memory
-```
+**`Host key verification failed`** — 走 `git@github.com:...` 时，Grok 调起的 git **没读到** 你的 `~/.ssh/known_hosts`（即便你本机 `ssh -T git@github.com` 已经成功）。
 
-或自己 clone 再从目录装：
+最稳的装法：你自己 clone（用已经能工作的 SSH），再让 Grok 装本地目录——不再二次访问 GitHub：
 
 ```bash
 git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
+grok plugin enable openviking-memory
 ```
 
-想继续用 `OwOfly/grok-openviking-memory` 这种简写，可把本机 Git 改成 OpenSSL：
+若坚持让 Grok 远程拉：
 
 ```bash
+# HTTPS 改用 OpenSSL
 git config --global http.sslBackend openssl
+grok plugin install OwOfly/grok-openviking-memory --trust
+
+# 或先把 GitHub 主机密钥写入当前用户
+ssh-keyscan -t ed25519,ecdsa,rsa github.com >> $env:USERPROFILE\.ssh\known_hosts
+grok plugin install git@github.com:OwOfly/grok-openviking-memory.git --trust
 ```
 
 ## 它在哪些时机工作

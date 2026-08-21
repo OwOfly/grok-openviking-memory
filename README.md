@@ -51,28 +51,30 @@ git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
 ```
 
-### `schannel: failed to receive handshake`
+### Windows clone failures
 
-`grok plugin install owner/repo` clones **HTTPS** (`https://github.com/OwOfly/grok-openviking-memory/`). On Windows, Git's default `http.sslBackend=schannel` often fails the TLS handshake to GitHub (proxy, corporate MITM, or an unstable path). The repo is public; this is not an auth or 404 error.
+`grok plugin install` runs its own `git clone`. That process does not always share your PowerShell SSH agent / `known_hosts`. The repo is public; neither error below means “access denied”.
 
-Use SSH instead (Grok accepts a full git URL):
+**`schannel: failed to receive handshake`** — the `owner/repo` shorthand uses HTTPS. Windows Git defaults to `schannel`, which often fails the TLS handshake to GitHub.
 
-```bash
-grok plugin install git@github.com:OwOfly/grok-openviking-memory.git --trust
-grok plugin enable openviking-memory
-```
+**`Host key verification failed`** — an SSH URL is used, but Grok’s git does **not** see your `~/.ssh/known_hosts` (even if `ssh -T git@github.com` already works in the same terminal).
 
-Or clone yourself, then install from the folder:
+Most reliable: clone with the SSH setup that already works, then install from the folder so Grok never talks to GitHub:
 
 ```bash
 git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
+grok plugin enable openviking-memory
 ```
 
-Machine-wide Git workaround (lets the `owner/repo` shorthand work over HTTPS):
+If you still want Grok to fetch remotely:
 
 ```bash
 git config --global http.sslBackend openssl
+grok plugin install OwOfly/grok-openviking-memory --trust
+
+ssh-keyscan -t ed25519,ecdsa,rsa github.com >> $env:USERPROFILE\.ssh\known_hosts
+grok plugin install git@github.com:OwOfly/grok-openviking-memory.git --trust
 ```
 
 ## When it runs
