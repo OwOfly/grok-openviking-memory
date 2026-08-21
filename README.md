@@ -1,57 +1,90 @@
 # Grok OpenViking Memory
 
-Community [OpenViking](https://github.com/volcengine/OpenViking) memory plugin for [Grok Build](https://github.com/xai-org/grok-build). Official OpenViking does not ship a Grok harness; this adapter wires the same auto-recall / auto-capture loop to Grok hooks.
+**让 Grok 记住你。** 不是再开一个会话就从零开始，而是跨项目、跨 Codex / Claude / Grok 共用同一份长期记忆。
 
-Not an official OpenViking or xAI product.
+[OpenViking](https://github.com/volcengine/OpenViking) 官方接了 Claude Code 和 Codex 的 hooks，Grok 只有 MCP。模型一偷懒、一漏调 `search`，上次说好的偏好和结论就没了。这个社区插件把同一套 **自动召回 + 自动捕获** 接到 Grok 生命周期上——模型不必先想起来去翻记忆。
 
-## Install
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Grok plugin](https://img.shields.io/badge/Grok-plugin-black)](https://github.com/xai-org/grok-build)
+[![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-339933)](https://nodejs.org/)
 
-Requires [Grok](https://github.com/xai-org/grok-build) and [Node.js](https://nodejs.org/) 18+. Point Grok at a running OpenViking server (`~/.openviking/ovcli.conf` or `OPENVIKING_*` env vars). Credentials stay on the machine; they are not in this repo.
+> 非 OpenViking / xAI 官方产品。
+
+## 装完会发生什么
+
+| 以前（只接 MCP） | 现在 |
+| --- | --- |
+| 新对话是一张白纸 | 开场就带上你的画像和记忆索引 |
+| 全靠模型自觉去 `search` | 每句提问前自动注入相关记忆 |
+| 说了「记住这个」才落盘 | 每轮结束静默写回 OpenViking |
+| Codex 记得、Grok 忘了 | 三边读同一台 OpenViking |
+
+注入进对话的是这样一块上下文，模型当场就能用：
+
+```xml
+<openviking-context source="auto-recall">
+  <memory uri="viking://user/…/代码注释规范.md" type="preferences">
+    新增 public API 必须写注释：做什么、参数、返回值、边界。
+  </memory>
+</openviking-context>
+```
+
+MCP 工具仍走你已经配好的 Grok `openviking` 服务器。插件 **不重复注册 MCP**，也不会把 API Key 打进仓库。
+
+## 安装
+
+需要：[Grok](https://github.com/xai-org/grok-build)、[Node.js 18+](https://nodejs.org/)、一台已运行的 [OpenViking](https://docs.openviking.ai/zh/getting-started/02-quickstart)。
 
 ```bash
 grok plugin install OwOfly/grok-openviking-memory --trust
 grok plugin enable openviking-memory
 ```
 
-Then reload plugins (`/plugins` → `r`) or start a new Grok session.
+然后 `/plugins` 按 `r` 重载，或新开一个 Grok 会话。
 
-Local checkout:
+从本地目录装：
 
 ```bash
 git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
 ```
 
-## What it does
+## 它在哪些时机工作
 
-| Hook | Behavior |
+不必记这些也能用。想核对行为时对着看：
+
+| 时机 | 做什么 |
 | --- | --- |
-| SessionStart | Inject user profile / memory index |
-| UserPromptSubmit | Recall memories for the current prompt |
-| Stop | Buffer user/assistant turns (empty stdout; Grok Stop must not inject context) |
-| PreCompact / SessionEnd | Flush and commit the OpenViking session |
-| PreToolUse (`Read\|Glob\|Grep`) | Block raw `viking://` filesystem reads |
-| SubagentStart / SubagentStop | Isolate subagent sessions as `gx-<id>__<type>` |
+| 会话开始 | 注入用户画像 + 记忆目录 |
+| 每次提交问题 | 按当前 prompt 召回相关记忆 |
+| 一轮结束 | 缓存 user / assistant（Stop 不往对话里塞东西，避免 Grok 把 Stop 当续写） |
+| 压缩前 / 会话结束 | 把缓存提交进 OpenViking |
+| 读文件碰到 `viking://` | 拦住，改走 MCP `read` / `search` |
+| 子代理 | 独立 session：`gx-<id>__<type>`，不和主会话串台 |
 
-MCP tools still come from Grok's existing `openviking` MCP server config. This plugin does not register a second MCP.
+## 配置
 
-## Configure
+和 Claude Code / Codex 插件同一条链，**运行时在本机读**，不进 git：
 
-Same chain as the Claude Code / Codex plugins:
-
-1. `OPENVIKING_*` environment variables
-2. `~/.openviking/ovcli.conf`
+1. 环境变量 `OPENVIKING_*`
+2. `~/.openviking/ovcli.conf`（`url`、`api_key`，可选 `account` / `user`）
 3. `~/.openviking/ov.conf`
-4. Default `http://127.0.0.1:1933` with no auth
+4. 都没有则默认 `http://127.0.0.1:1933`，无鉴权
 
-Debug:
+本地 OpenViking 可先跳过配置。远程服务器写好 `ovcli.conf` 即可。
+
+排障：
 
 ```bash
 set OPENVIKING_DEBUG=1
 ```
 
-Logs: `~/.openviking/logs/grok-hooks.log`
+日志在 `~/.openviking/logs/grok-hooks.log`。
+
+## 和官方插件的关系
+
+Claude Code、Codex 请走 [官方安装脚本](https://docs.openviking.ai/zh/agent-integrations/01-overview)。本仓库只补 Grok 缺的那一截 hooks，召回/捕获运行时内嵌自 OpenViking `memory-plugin-shared`。
 
 ## License
 
-[GNU AGPL v3](LICENSE). `scripts/shared/` is vendored from OpenViking `memory-plugin-shared`.
+[GNU AGPL v3](LICENSE)。`scripts/shared/` 来自 OpenViking，因此整个插件按 AGPL 分发。
