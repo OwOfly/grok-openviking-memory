@@ -51,6 +51,30 @@ git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
 ```
 
+### 报错 `schannel: failed to receive handshake`
+
+`grok plugin install 用户名/仓库` 会走 **HTTPS**（`https://github.com/OwOfly/grok-openviking-memory/`）。Windows 上 Git 默认 `http.sslBackend=schannel`，连 GitHub 时 TLS 握手经常失败（代理、公司网关、线路不稳）。仓库是公开的，这不是没权限或 404。
+
+改用 SSH（Grok 接受完整 git URL）：
+
+```bash
+grok plugin install git@github.com:OwOfly/grok-openviking-memory.git --trust
+grok plugin enable openviking-memory
+```
+
+或自己 clone 再从目录装：
+
+```bash
+git clone git@github.com:OwOfly/grok-openviking-memory.git
+grok plugin install ./grok-openviking-memory --trust
+```
+
+想继续用 `OwOfly/grok-openviking-memory` 这种简写，可把本机 Git 改成 OpenSSL：
+
+```bash
+git config --global http.sslBackend openssl
+```
+
 ## 它在哪些时机工作
 
 不必记这些也能用。想核对行为时对着看：

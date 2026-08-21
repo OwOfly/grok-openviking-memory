@@ -51,6 +51,30 @@ git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
 ```
 
+### `schannel: failed to receive handshake`
+
+`grok plugin install owner/repo` clones **HTTPS** (`https://github.com/OwOfly/grok-openviking-memory/`). On Windows, Git's default `http.sslBackend=schannel` often fails the TLS handshake to GitHub (proxy, corporate MITM, or an unstable path). The repo is public; this is not an auth or 404 error.
+
+Use SSH instead (Grok accepts a full git URL):
+
+```bash
+grok plugin install git@github.com:OwOfly/grok-openviking-memory.git --trust
+grok plugin enable openviking-memory
+```
+
+Or clone yourself, then install from the folder:
+
+```bash
+git clone git@github.com:OwOfly/grok-openviking-memory.git
+grok plugin install ./grok-openviking-memory --trust
+```
+
+Machine-wide Git workaround (lets the `owner/repo` shorthand work over HTTPS):
+
+```bash
+git config --global http.sslBackend openssl
+```
+
 ## When it runs
 
 You do not need this table to use the plugin. It is here if you want to verify behavior:
