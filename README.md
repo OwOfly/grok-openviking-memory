@@ -1,90 +1,92 @@
 # Grok OpenViking Memory
 
-**让 Grok 记住你。** 不是再开一个会话就从零开始，而是跨项目、跨 Codex / Claude / Grok 共用同一份长期记忆。
+**Make Grok remember you.** New sessions should not start from zero. Share one long-term memory across projects — and across Codex, Claude Code, and Grok.
 
-[OpenViking](https://github.com/volcengine/OpenViking) 官方接了 Claude Code 和 Codex 的 hooks，Grok 只有 MCP。模型一偷懒、一漏调 `search`，上次说好的偏好和结论就没了。这个社区插件把同一套 **自动召回 + 自动捕获** 接到 Grok 生命周期上——模型不必先想起来去翻记忆。
+English | [简体中文](README.zh-CN.md)
+
+[OpenViking](https://github.com/volcengine/OpenViking) ships hook-based auto-recall for Claude Code and Codex. Grok only had MCP: if the model forgets to call `search`, last week's preferences and decisions never show up. This community plugin wires the same **auto-recall + auto-capture** loop into Grok's lifecycle, so memory does not depend on the model remembering to look it up.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Grok plugin](https://img.shields.io/badge/Grok-plugin-black)](https://github.com/xai-org/grok-build)
 [![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-339933)](https://nodejs.org/)
 
-> 非 OpenViking / xAI 官方产品。
+> Not an official OpenViking or xAI product.
 
-## 装完会发生什么
+## After install
 
-| 以前（只接 MCP） | 现在 |
+| MCP only | With this plugin |
 | --- | --- |
-| 新对话是一张白纸 | 开场就带上你的画像和记忆索引 |
-| 全靠模型自觉去 `search` | 每句提问前自动注入相关记忆 |
-| 说了「记住这个」才落盘 | 每轮结束静默写回 OpenViking |
-| Codex 记得、Grok 忘了 | 三边读同一台 OpenViking |
+| Every new chat is a blank slate | Session start injects your profile and memory index |
+| The model must remember to `search` | Every prompt auto-injects relevant memories |
+| Nothing is stored unless you say "remember this" | Each turn is written back to OpenViking |
+| Codex remembers; Grok forgets | All three talk to the same OpenViking server |
 
-注入进对话的是这样一块上下文，模型当场就能用：
+Injected context looks like this — the model can use it immediately:
 
 ```xml
 <openviking-context source="auto-recall">
-  <memory uri="viking://user/…/代码注释规范.md" type="preferences">
-    新增 public API 必须写注释：做什么、参数、返回值、边界。
+  <memory uri="viking://user/…/code-comment-conventions.md" type="preferences">
+    Public APIs need comments: what it does, params, return value, edge cases.
   </memory>
 </openviking-context>
 ```
 
-MCP 工具仍走你已经配好的 Grok `openviking` 服务器。插件 **不重复注册 MCP**，也不会把 API Key 打进仓库。
+MCP tools still use your existing Grok `openviking` server. This plugin **does not register a second MCP**, and it never ships API keys in the repo.
 
-## 安装
+## Install
 
-需要：[Grok](https://github.com/xai-org/grok-build)、[Node.js 18+](https://nodejs.org/)、一台已运行的 [OpenViking](https://docs.openviking.ai/zh/getting-started/02-quickstart)。
+You need [Grok](https://github.com/xai-org/grok-build), [Node.js 18+](https://nodejs.org/), and a running [OpenViking](https://docs.openviking.ai/en/getting-started/02-quickstart) server.
 
 ```bash
 grok plugin install OwOfly/grok-openviking-memory --trust
 grok plugin enable openviking-memory
 ```
 
-然后 `/plugins` 按 `r` 重载，或新开一个 Grok 会话。
+Reload plugins (`/plugins` → `r`) or start a new Grok session.
 
-从本地目录装：
+From a local checkout:
 
 ```bash
 git clone git@github.com:OwOfly/grok-openviking-memory.git
 grok plugin install ./grok-openviking-memory --trust
 ```
 
-## 它在哪些时机工作
+## When it runs
 
-不必记这些也能用。想核对行为时对着看：
+You do not need this table to use the plugin. It is here if you want to verify behavior:
 
-| 时机 | 做什么 |
+| Event | What it does |
 | --- | --- |
-| 会话开始 | 注入用户画像 + 记忆目录 |
-| 每次提交问题 | 按当前 prompt 召回相关记忆 |
-| 一轮结束 | 缓存 user / assistant（Stop 不往对话里塞东西，避免 Grok 把 Stop 当续写） |
-| 压缩前 / 会话结束 | 把缓存提交进 OpenViking |
-| 读文件碰到 `viking://` | 拦住，改走 MCP `read` / `search` |
-| 子代理 | 独立 session：`gx-<id>__<type>`，不和主会话串台 |
+| Session start | Inject user profile + memory index |
+| Each submitted prompt | Recall memories for the current prompt |
+| Turn end | Buffer user / assistant (Stop writes no extra context, so Grok does not treat it as a keep-going gate) |
+| Before compact / session end | Flush the buffer into OpenViking |
+| File read hits `viking://` | Deny and point at MCP `read` / `search` |
+| Subagent | Isolated session: `gx-<id>__<type>` |
 
-## 配置
+## Configure
 
-和 Claude Code / Codex 插件同一条链，**运行时在本机读**，不进 git：
+Same chain as the Claude Code / Codex plugins. Credentials are **read on the machine at runtime**, never committed:
 
-1. 环境变量 `OPENVIKING_*`
-2. `~/.openviking/ovcli.conf`（`url`、`api_key`，可选 `account` / `user`）
+1. `OPENVIKING_*` environment variables
+2. `~/.openviking/ovcli.conf` (`url`, `api_key`, optional `account` / `user`)
 3. `~/.openviking/ov.conf`
-4. 都没有则默认 `http://127.0.0.1:1933`，无鉴权
+4. Fallback: `http://127.0.0.1:1933` with no auth
 
-本地 OpenViking 可先跳过配置。远程服务器写好 `ovcli.conf` 即可。
+Skip config for a local unauthenticated server. For a remote server, fill in `ovcli.conf`.
 
-排障：
+Debug:
 
 ```bash
 set OPENVIKING_DEBUG=1
 ```
 
-日志在 `~/.openviking/logs/grok-hooks.log`。
+Logs: `~/.openviking/logs/grok-hooks.log`
 
-## 和官方插件的关系
+## Relation to official plugins
 
-Claude Code、Codex 请走 [官方安装脚本](https://docs.openviking.ai/zh/agent-integrations/01-overview)。本仓库只补 Grok 缺的那一截 hooks，召回/捕获运行时内嵌自 OpenViking `memory-plugin-shared`。
+For Claude Code and Codex, use the [official installer](https://docs.openviking.ai/en/agent-integrations/01-overview). This repo only fills the Grok gap. Recall/capture runtime is vendored from OpenViking `memory-plugin-shared`.
 
 ## License
 
-[GNU AGPL v3](LICENSE)。`scripts/shared/` 来自 OpenViking，因此整个插件按 AGPL 分发。
+[GNU AGPL v3](LICENSE). `scripts/shared/` comes from OpenViking, so the whole plugin is distributed under AGPL.
